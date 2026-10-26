@@ -1,0 +1,40 @@
+# Android-installed runtime configuration. Gradle packages this as
+# variants/warioland4/game.toml under the app's private files directory.
+# tools/regen.sh substitutes the real ROM SHA-1 for b9fe05a8080e124b67bce6a623234ee3b518a2c1 once the
+# user's legally dumped ROM is present.
+[game]
+name = "Wario Land 4"
+short_name = "warioland4"
+default_region = "usa"
+
+[bios]
+path = "../../bios/gba_bios.bin"
+sha1 = "300c20df6731a33952ded8c436f7f186d25d3492"
+
+[rom]
+path = "../../roms/warioland4_usa.gba"
+sha1 = "b9fe05a8080e124b67bce6a623234ee3b518a2c1"
+
+[recompiler]
+entry_point = "0x08000000"
+seeds = "variants/warioland4/symbols/imported_symbols.tsv"
+boundaries = "variants/warioland4/symbols/function_boundaries.tsv"
+out_dir = "variants/warioland4/generated"
+strict = true
+
+[save]
+type = "sram"
+
+[runtime]
+debug_port = 19842
+window_title = "WarioLand4Recomp"
+
+[video]
+screen = "frontlit"
+
+[audio]
+shadow = true
+
+[functions]
+arm = []
+thumb = []

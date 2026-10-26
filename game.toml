@@ -1,0 +1,89 @@
+# game.toml — Wario Land 4 (GBA)
+#
+# The runner reads this to decide which ROM to load, where the entry
+# point is, and what save chip is expected. tools/regen.sh substitutes
+# the user's ROM SHA-1 for b9fe05a8080e124b67bce6a623234ee3b518a2c1 at regeneration time.
+
+[game]
+name           = "Wario Land 4"
+short_name     = "warioland4"
+default_region = "usa"
+# ── Recompiler program table ─────────────────────────────────────────
+#
+# Consumed by gba_recompile: cartridge maps at 0x08000000, 8 MiB.
+# WL4E is the US cartridge code. aot_scan_start/end are omitted on
+# purpose — the imported decomp boundaries are the authoritative
+# code/data split, and a hand-bounded range risks decoding assets.
+[program]
+name         = "Wario Land 4 (USA)"
+id           = "WL4E"
+load_address = 0x08000000
+size         = 0x00800000
+entry_pc     = 0x08000000
+
+[identity]
+sha1 = "b9fe05a8080e124b67bce6a623234ee3b518a2c1"
+md5  = "5fe47355a33e3fabec2a1607af88a404"
+
+# ── BIOS identity ────────────────────────────────────────────────────
+#
+# The GBA BIOS is real, executed code. The runner refuses to launch
+# without a hash-verified BIOS. See gbarecomp/PRINCIPLES.md
+# "BIOS is sacred" and gbarecomp/bios/README.md.
+[bios]
+path = "bios/gba_bios.bin"
+sha1 = "300c20df6731a33952ded8c436f7f186d25d3492"
+
+# ── ROM identity ─────────────────────────────────────────────────────
+#
+# rom = the user's legally dumped ROM image (not in this repo).
+# sha1 = expected SHA-1; if it doesn't match, the runner refuses to
+#        launch (see "ROM hash gates everything").
+[rom]
+path = "decomp/baserom_us.gba"
+sha1 = "b9fe05a8080e124b67bce6a623234ee3b518a2c1"
+
+# ── Recompiler entry & layout ───────────────────────────────────────
+#
+# seeds/boundaries are produced by tools/regen.sh from the
+# lilDavid/warioland4 decompilation's ELF + map output.
+[recompiler]
+entry_point   = "0x08000000"
+seeds         = "variants/warioland4/symbols/imported_symbols.tsv"
+boundaries    = "variants/warioland4/symbols/function_boundaries.tsv"
+out_dir       = "variants/warioland4/generated"
+strict        = true
+
+# ── Save chip ────────────────────────────────────────────────────────
+#
+# Wario Land 4 uses 32 KiB SRAM (decomp: src/sram.c, ClearSRAM).
+[save]
+type = "sram"
+path = "roms/warioland4_usa.sav"
+
+# ── Runtime ─────────────────────────────────────────────────────────
+[runtime]
+debug_port    = 19842
+window_title  = "WarioLand4Recomp"
+
+# ── Video ───────────────────────────────────────────────────────────
+# Present-time screen-color simulation. WL4's art is authored for the
+# original reflective panel; "frontlit" is the faithful look. Overridable
+# at launch with the GBARECOMP_SCREEN env var.
+[video]
+screen = "frontlit"
+
+# ── Audio ───────────────────────────────────────────────────────────
+# MP2K (m4a) verified-enhancement shadow mixer: re-renders the driver's
+# voices in float, policed every sample against the canon hardware
+# stream. QoL on top of correctness, never the verify oracle. Off by
+# default; overridable at launch with GBARECOMP_AUDIO_SHADOW ("0" off).
+[audio]
+shadow = true
+
+# ── Function table (dispatch hints) ─────────────────────────────────
+#
+# Kept empty: the imported symbol TSV carries every decomp function.
+[functions]
+arm   = []
+thumb = []
