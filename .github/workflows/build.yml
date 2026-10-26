@@ -59,7 +59,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # The hosted runner ships the Android SDK/NDK; accept the licenses and
+      # skip android-actions/setup-android (its sdkmanager license-prompt
+      # handling breaks on the preview-channel cmdline-tools).
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
 
       - name: Build debug APK (no ROM, no BIOS — user supplies both on first run)
         working-directory: android
