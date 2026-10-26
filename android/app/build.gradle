@@ -1,0 +1,54 @@
+plugins {
+    id "com.android.application"
+}
+
+// The Android shell (SDL2, org.gbarecomp activities, manifest, native CMake
+// root, payload staging) is shared by every gbarecomp game and lives in the
+// engine: gbarecomp/platform/android/gbarecomp-app.gradle. Engine / UI
+// checkouts default to the pinned submodules; a feature worktree can be
+// selected with -PgbarecompRoot=... / -PrecompUiRoot=... (or the
+// GBARECOMP_ROOT / RECOMP_UI_ROOT environment variables).
+def gameRoot = rootDir.parentFile
+def pick = { String prop, String env, File fallback ->
+    def v = providers.gradleProperty(prop).orNull ?: System.getenv(env)
+    return v ? new File(v) : fallback
+}
+def engineRoot = pick("gbarecompRoot", "GBARECOMP_ROOT", new File(gameRoot, "gbarecomp"))
+def recompUiRoot = pick("recompUiRoot", "RECOMP_UI_ROOT", new File(gameRoot, "recomp-ui"))
+
+ext.gbaGame = [
+    applicationId : "com.imsoepic.warioland4",
+    versionCode   : 10,
+    versionName   : "0.1.0",
+    title         : "Wario Land 4",
+    romLabel      : "Wario Land 4 ROM",
+    romSha1       : ["b9fe05a8080e124b67bce6a623234ee3b518a2c1"],
+    romSize       : 8388608,
+    romFile       : "warioland4_usa.gba",
+    biosRequired  : false,
+    // 16 KB-page devices (Android 15+) refuse 4 KB-aligned .so files at
+    // dlopen; align every shared lib (libmain.so + libSDL2.so) to 16 KB.
+    cmakeArguments: ["-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"],
+    // WL4 is a pure D-pad game; lock the display like a handheld.
+    orientation   : "landscape-locked",
+    gyro          : false,
+    // Reinstall the authored runtime payload while preserving player data.
+    payloadVersion: "1",
+    setupNote     : "D-pad, A/B, shoulder buttons; touch and gamepads " +
+                    "are also supported.",
+    variant       : "warioland4",
+    gameToml      : new File(rootDir, "game_android.toml"),
+    gameRoot      : gameRoot,
+    engineRoot    : engineRoot,
+    recompUiRoot  : recompUiRoot,
+    // arm64 phones for releases; debug adds x86_64 for the stock emulator.
+    releaseAbis   : ["arm64-v8a"],
+]
+
+apply from: new File(engineRoot, "platform/android/gbarecomp-app.gradle")
+
+// Native symbol-table extraction for the Play Console is a multi-GB RAM
+// spike and useless for side-loaded APKs — skip it on this 4 GB box.
+tasks.whenTaskAdded { t ->
+    if (t.name.contains("extractReleaseNativeSymbolTables")) t.enabled = false
+}
