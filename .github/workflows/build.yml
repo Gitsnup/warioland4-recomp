@@ -1,0 +1,73 @@
+name: build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop:
+    name: Linux desktop build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsdl2-dev cmake ninja-build \
+            gcc-arm-none-eabi binutils-arm-none-eabi
+
+      - name: Regenerate gameplay-tweak patches (idempotence check)
+        run: |
+          python3 tools/wl4_tweak_gen.py
+          git diff --exit-code gbarecomp/src/runtime/tweaks_patches.h || {
+            echo "::error::tweaks_patches.h is stale — run python3 tools/wl4_tweak_gen.py"
+            exit 1
+          }
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --target WarioLand4Recomp -j 2
+
+      - name: Verify binary
+        run: test -x build/WarioLand4Recomp && file build/WarioLand4Recomp
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warioland4-recomp-linux-x64
+          path: |
+            build/WarioLand4Recomp
+            game.toml
+            variants/
+          if-no-files-found: error
+
+  android:
+    name: Android arm64 debug APK
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build debug APK (no ROM, no BIOS — user supplies both on first run)
+        working-directory: android
+        run: ./gradlew assembleDebug -PgbaNativeJobs=2 --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warioland4-recomp-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
